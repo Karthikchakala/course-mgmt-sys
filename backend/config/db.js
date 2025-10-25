@@ -57,19 +57,19 @@ const CREATE_TABLES_SQL = `
     );
 
     -- 4. Orders/Payments Table
-    CREATE TABLE IF NOT EXISTS orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        course_id INTEGER NOT NULL,
-        amount REAL NOT NULL,
-        order_id TEXT UNIQUE NOT NULL, -- Paytm Order ID
-        txn_id TEXT UNIQUE,            -- Paytm Transaction ID
-        txn_status TEXT NOT NULL,      -- PENDING, SUCCESS, FAILURE
-        txn_details TEXT,              -- Full JSON callback data (stored as TEXT)
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE RESTRICT
-    );
+CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    course_id INTEGER NOT NULL,
+    amount REAL NOT NULL,
+    order_id TEXT UNIQUE NOT NULL, -- Razorpay Order ID
+    txn_id TEXT,                   -- Razorpay Transaction ID
+    txn_status TEXT NOT NULL CHECK(txn_status IN ('PENDING','TXN_SUCCESS','TXN_FAILED')),
+    txn_details TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE RESTRICT
+);
 
     -- 5. Enrollments Table (successful course purchases)
     CREATE TABLE IF NOT EXISTS enrollments (

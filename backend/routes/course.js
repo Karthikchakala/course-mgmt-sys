@@ -28,5 +28,4 @@ router.get('/', listPublicCourses);
 // which is handled by checkEnrollmentStatus).
 router.get('/:id', protect, checkEnrollmentStatus, getCourseDetails);
 
-
 module.exports = router;

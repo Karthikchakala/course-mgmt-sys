@@ -19,14 +19,7 @@ const StudentDashboard = () => {
                 
                 // Filter orders to only show successful, unique course enrollments
                 const successfulCourses = response.data.orders
-                    .filter(order => order.txn_status === 'TXN_SUCCESS')
-                    // Deduplicate courses using reduce to ensure courses are listed only once
-                    .reduce((acc, current) => {
-                        if (!acc.some(item => item.course_id === current.course_id)) {
-                            acc.push(current);
-                        }
-                        return acc;
-                    }, []);
+                    .filter(order => order.txn_status === 'TXN_SUCCESS');
 
                 setEnrolledCourses(successfulCourses);
                 setError(null);

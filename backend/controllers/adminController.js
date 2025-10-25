@@ -116,15 +116,6 @@ const listAllStudents = async (req, res) => {
 };
 
 
-// -----------------------------------------------------------------
-// 💳 PAYMENTS / REPORTS (Placeholder)
-// -----------------------------------------------------------------
-
-const getPaymentsReport = (req, res) => {
-    // This will eventually query the 'orders' table
-    res.status(501).json({ message: 'Payments Report not yet implemented.' });
-};
-
 
 // -----------------------------------------------------------------
 // 📚 COURSE MANAGEMENT
@@ -354,6 +345,47 @@ const deleteLesson = async (req, res) => {
             changes: this.changes
         });
     });
+};
+
+// @desc    Get detailed transaction report (replacing the 501 placeholder)
+// @route   GET /admin/payments
+// @access  Private/Admin
+const getPaymentsReport = async (req, res) => {
+    try {
+        // SQL to retrieve all transactions, joining with user and course names
+        const sql = `
+            SELECT 
+                o.id AS orderId, 
+                o.order_id AS razorpayOrderId, 
+                o.amount, 
+                o.txn_status, 
+                o.created_at,
+                u.name AS studentName, 
+                u.email AS studentEmail,
+                c.title AS courseTitle
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            JOIN courses c ON o.course_id = c.id
+            ORDER BY o.created_at DESC
+        `;
+
+        const transactions = await new Promise((resolve, reject) => {
+            // db.all is used because we expect multiple rows/transactions
+            db.all(sql, (err, rows) => { 
+                if (err) return reject(err);
+                resolve(rows);
+            });
+        });
+
+        res.status(200).json({
+            message: 'All transactions retrieved.',
+            transactions: transactions
+        });
+
+    } catch (error) {
+        console.error("Payment report error:", error);
+        res.status(500).json({ message: 'Failed to retrieve payment report.', error: error.message });
+    }
 };
 
 

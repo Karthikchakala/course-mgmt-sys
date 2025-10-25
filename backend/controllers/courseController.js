@@ -2,9 +2,9 @@
 
 const db = require('../config/db');
 
-// @desc    List all available courses for public viewing
-// @route   GET /courses
-// @access  Public
+// @desc    List all available courses for public viewing
+// @route   GET /courses
+// @access  Public
 const listPublicCourses = async (req, res) => {
     // Only fetch essential course details
     const sql = `
@@ -61,11 +61,94 @@ const checkEnrollmentStatus = async (req, res, next) => {
     });
 };
 
-// @desc    Get course details and lessons (lessons are restricted by enrollment)
-// @route   GET /courses/:id
-// @access  Public (Metadata) / Private (Lessons)
+// @desc    Get course details and lessons (lessons are restricted by enrollment)
+// @route   GET /courses/:id
+// @access  Public (Metadata) / Private (Lessons)
+// const getCourseDetails = async (req, res) => {
+//     const { id: courseId } = req.params;
+//     const isEnrolled = req.isEnrolled;
+//     const userId = req.user ? req.user.id : null;
+
+//     // 1. Get Course Metadata
+//     const courseSql = `
+//         SELECT id, title, description, price, image_url, category 
+//         FROM courses 
+//         WHERE id = ?
+//     `;
+
+//     db.get(courseSql, [courseId], async (err, course) => {
+//         if (err) return res.status(500).json({ message: 'Database error fetching course.' });
+//         if (!course) return res.status(404).json({ message: 'Course not found.' });
+
+//         let lessons = [];
+//         let progress = {};
+
+//         // 2. If Enrolled (or Admin), fetch Lessons and Progress
+//         if (isEnrolled) {
+//             const lessonsSql = `
+//                 SELECT id, title, video_url, notes, order_number 
+//                 FROM lessons 
+//                 WHERE course_id = ? 
+//                 ORDER BY order_number ASC
+//             `;
+            
+//             lessons = await new Promise((resolve, reject) => {
+//                 db.all(lessonsSql, [courseId], (err, rows) => {
+//                     if (err) return reject(err);
+//                     resolve(rows);
+//                 });
+//             });
+
+//             // 3. Fetch Progress (Only for logged-in students)
+//             if (userId) {
+//                 const progressSql = `
+//                     SELECT lesson_id 
+//                     FROM progress 
+//                     WHERE user_id = ? AND course_id = ?
+//                 `;
+                
+//                 const progressRows = await new Promise((resolve, reject) => {
+//                     db.all(progressSql, [userId, courseId], (err, rows) => {
+//                         if (err) return reject(err);
+//                         resolve(rows);
+//                     });
+//                 });
+                
+//                 // Format progress into an object for easy lookup
+//                 progress = progressRows.reduce((acc, row) => {
+//                     acc[row.lesson_id] = true;
+//                     return acc;
+//                 }, {});
+//             }
+//         }
+        
+//         // 4. Return Data
+//         const responseData = {
+//             ...course,
+//             isEnrolled: isEnrolled,
+//             lessons: isEnrolled ? lessons.map(lesson => ({
+//                 ...lesson,
+//                 isCompleted: !!progress[lesson.id]
+//             })) : [],
+//             // If not enrolled, lessons array is empty.
+//             message: isEnrolled 
+//                 ? 'Course details and lessons retrieved.' 
+//                 : 'Course details retrieved. Login and purchase to access lessons.'
+//         };
+
+//         res.status(200).json(responseData);
+//     });
+// };
+
+// @desc    Get course details and lessons (lessons are restricted by enrollment)
+// @route   GET /courses/:id
+// @access  Public (Metadata) / Private (Lessons)
 const getCourseDetails = async (req, res) => {
-    const { id: courseId } = req.params;
+    const { id: courseIdString } = req.params;
+    
+    // 🛑 FIX: Convert the string ID from the URL to an integer
+    const courseId = parseInt(courseIdString, 10);
+    
     const isEnrolled = req.isEnrolled;
     const userId = req.user ? req.user.id : null;
 
@@ -76,8 +159,11 @@ const getCourseDetails = async (req, res) => {
         WHERE id = ?
     `;
 
+    // The db.get call now uses the explicit integer ID
     db.get(courseSql, [courseId], async (err, course) => {
         if (err) return res.status(500).json({ message: 'Database error fetching course.' });
+        
+        // This is the line that was failing: now it should be fine.
         if (!course) return res.status(404).json({ message: 'Course not found.' });
 
         let lessons = [];
@@ -85,6 +171,7 @@ const getCourseDetails = async (req, res) => {
 
         // 2. If Enrolled (or Admin), fetch Lessons and Progress
         if (isEnrolled) {
+            // ... (The rest of the enrollment/lesson logic follows, also using the integer courseId)
             const lessonsSql = `
                 SELECT id, title, video_url, notes, order_number 
                 FROM lessons 
@@ -93,7 +180,8 @@ const getCourseDetails = async (req, res) => {
             `;
             
             lessons = await new Promise((resolve, reject) => {
-                db.all(lessonsSql, [courseId], (err, rows) => {
+                // Use courseId (integer) here
+                db.all(lessonsSql, [courseId], (err, rows) => { 
                     if (err) return reject(err);
                     resolve(rows);
                 });
@@ -108,13 +196,14 @@ const getCourseDetails = async (req, res) => {
                 `;
                 
                 const progressRows = await new Promise((resolve, reject) => {
+                    // Use courseId (integer) here
                     db.all(progressSql, [userId, courseId], (err, rows) => {
                         if (err) return reject(err);
                         resolve(rows);
                     });
                 });
                 
-                // Format progress into an object for easy lookup
+                // ... rest of progress mapping
                 progress = progressRows.reduce((acc, row) => {
                     acc[row.lesson_id] = true;
                     return acc;
@@ -130,7 +219,6 @@ const getCourseDetails = async (req, res) => {
                 ...lesson,
                 isCompleted: !!progress[lesson.id]
             })) : [],
-            // If not enrolled, lessons array is empty.
             message: isEnrolled 
                 ? 'Course details and lessons retrieved.' 
                 : 'Course details retrieved. Login and purchase to access lessons.'
